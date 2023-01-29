@@ -1,32 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
+import {useEffect, useState, createRef} from 'react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const videoRef = createRef<HTMLVideoElement>()
+
+  useEffect(() => {
+    // WebRTC stuff:
+    const constraints = {
+      audio: false,
+      video: true
+    }
+
+    const initMediaStream: () => void = async () => {
+      let _stream: MediaStream | null = null
+      try {
+        _stream = await navigator.mediaDevices.getUserMedia(constraints)
+        setStream(_stream)
+        if (videoRef.current) {
+          console.log(stream)
+          videoRef.current.srcObject = stream
+        }
+      } catch(err) {
+        console.error(err)
+      }
+    }
+
+    initMediaStream()
+
+  }, [])
 
   return (
     <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <video playsInline autoPlay className="playback" ref={videoRef}></video>
+      <canvas width={640} height={480}></canvas>
     </div>
   )
 }
