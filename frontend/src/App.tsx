@@ -1,39 +1,63 @@
-import {useEffect, useState, createRef} from 'react'
+import React, {useEffect, useState, createRef, MouseEventHandler} from 'react'
 import './App.css'
 
+import {initMediaStream, startRecording, stopRecording, playbackRecording, initMediaRecorder} from './webrtcMediaHelpers';
+
+export type Stream = MediaStream | null
+export type Recorder = MediaRecorder | null
+
 function App() {
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [recorder, setRecorder] = useState<Recorder>(null)
   const videoRef = createRef<HTMLVideoElement>()
+  const recordedVideoRef = createRef<HTMLVideoElement>()
+  const [recordedBlobs, setRecordedBlobs] = useState<Array<any>>([])
+  const [errorMsg, setErrorMsg] = useState<string>('')
 
   useEffect(() => {
-    // WebRTC stuff:
-    const constraints = {
-      audio: false,
-      video: true
-    }
 
-    const initMediaStream: () => void = async () => {
-      let _stream: MediaStream | null = null
+    const initWebRTC: () => void = async () => {
       try {
-        _stream = await navigator.mediaDevices.getUserMedia(constraints)
-        setStream(_stream)
-        if (videoRef.current) {
-          console.log(stream)
-          videoRef.current.srcObject = stream
+        const _stream = await initMediaStream(videoRef)
+        if (_stream) {
+          const _recorder = initMediaRecorder(_stream, recordedBlobs, setRecordedBlobs)
+          setRecorder(_recorder)
         }
-      } catch(err) {
-        console.error(err)
+      } catch (err) {
+        const errorMsg = 'Unable to configure webRTC'
+        console.error(errorMsg)
+        setErrorMsg(errorMsg)
       }
     }
 
-    initMediaStream()
-
+    initWebRTC()
   }, [])
+
+  const handleStartRecording: MouseEventHandler = () => {
+    recorder && startRecording(recorder)
+  }
+
+  const handleStopRecording: MouseEventHandler = () => {
+    recorder && stopRecording(recorder)
+  }
+
+  const handlePlaybackRecording: MouseEventHandler = () => {
+    playbackRecording(recordedBlobs, recordedVideoRef)
+  }
 
   return (
     <div className="App">
-      <video playsInline autoPlay className="playback" ref={videoRef}></video>
-      <canvas width={640} height={480}></canvas>
+      {!errorMsg ?
+        <div>
+          <video playsInline autoPlay className="capture" ref={videoRef}></video>
+          <div>
+              <button onClick={handleStartRecording} className="video-button">Start Recording</button>
+              <button onClick={handleStopRecording} className="video-button">Stop Recording</button>
+          </div>
+          <h1>Recording: </h1>
+          <video playsInline className="playback" ref={recordedVideoRef}></video>
+          <button onClick={handlePlaybackRecording} className="video-button">Playback Video</button>
+        </div> : <div>{errorMsg}</div>
+      }
     </div>
   )
 }
